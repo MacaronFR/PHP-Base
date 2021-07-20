@@ -1,7 +1,7 @@
 <?php
 
 
-namespace Hyperion\API;
+namespace Macaron\Base;
 use PDO;
 use PDOException;
 

@@ -1,6 +1,6 @@
 <?php
 
-namespace Hyperion\API;
+namespace Macaron\Base;
 require_once "autoload.php";
 
 /**
