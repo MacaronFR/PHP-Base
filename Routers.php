@@ -104,7 +104,6 @@ class Router{
 			array_shift($matches);
 			$key = $this->getUriParamName($pattern);
 			$uri_args = array_combine($key, $matches);
-			var_dump($uri_args);
 			return $uri_args;
 		}
 		return false;

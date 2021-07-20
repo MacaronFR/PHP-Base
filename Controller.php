@@ -13,7 +13,6 @@ use JetBrains\PhpStorm\NoReturn;
  */
 abstract class Controller{
 
-
 	public function __construct(
 		/** @var array|null $uri_args*/
 		protected array|null $uri_args,
