@@ -24,7 +24,7 @@ example de route
 
 pourrait correspondre à
 
-> /fichier/bonjour
-> /fichier/bonjour/png
-> /fichier/bonjour/png/aujourdhui
-> /fichier/bonjour/pngdemain/aujourdhui/hier
+> /fichier/bonjour  
+> /fichier/bonjour/png  
+> /fichier/bonjour/png/aujourdhui  
+> /fichier/bonjour/pngdemain/aujourdhui/hier  
