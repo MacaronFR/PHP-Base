@@ -31,17 +31,18 @@ abstract class Model{
 	 * Query to Database
 	 * @param string $statement Statement to query
 	 * @param bool $unique
-	 * @return false|array
+	 * @return array
+	 * @throws ModelException
 	 */
-	protected function query(string $statement, bool $unique = false): false|array{
+	protected function query(string $statement, bool $unique = false): array{
 		try {
 			$res = $this->bdd->query($statement);
 			if($unique){
 				return $res->fetch(PDO::FETCH_ASSOC);
 			}
 			return $res->fetchAll(PDO::FETCH_ASSOC);
-		}catch(PDOException){
-			return false;
+		}catch(PDOException $e){
+			throw new ModelException("Error during query\nSQL Query : $statement", ModelException::$QUERY_ERROR, $e);
 		}
 	}
 
@@ -52,6 +53,7 @@ abstract class Model{
 	 * @param bool $fetch Query have to be fetch ?
 	 * @param bool $last_id Want to retrieve the last inserted ID (not compatible with fetch)
 	 * @return array|bool|int
+	 * @throws ModelException
 	 */
 	protected function preparedQuery(string $statement, array $param, bool $unique = false, bool $fetch = true, bool $last_id = false): array|bool|int{
 		$req = $this->bdd->prepare($statement);
@@ -70,8 +72,12 @@ abstract class Model{
 				return $req->rowCount() !== 0;
 			}
 		}catch (PDOException $e){
-			echo "Error : ".$e->getMessage();
-			return false;
+			$errorMsg = "Error during prepared query\nSQL Query : $statement\nParam : [";
+			foreach($param as $k => $v){
+				$errorMsg .= "\n$k => $v";
+			}
+			$errorMsg .= "\n]";
+			throw new ModelException($errorMsg, ModelException::$QUERY_PREPARED_ERROR, $e);
 		}
 	}
 
@@ -126,6 +132,7 @@ abstract class Model{
 	 * @param int $iteration
 	 * @param bool $limit
 	 * @return array|false
+	 * @throws ModelException
 	 */
 	public function selectAll(int $iteration = 0, bool $limit = true): array|false{
 		$start = $this->max_row * $iteration;
@@ -141,25 +148,35 @@ abstract class Model{
 	}
 
 	/**
-	 * @return int|false Select the total row in the table
+	 * @return int Select the total row in the table
+	 * @throws ModelException
 	 */
-	public function selectTotal(): int|false{
+	public function selectTotal(): int{
 		$sql = "SELECT COUNT($this->id_name) as count FROM $this->table_name WHERE $this->id_name<>0";
-		$res = $this->query($sql);
-		if($res !== false){
+		try{
+			$res = $this->query($sql);
 			return (int)$res[0]['count'];
+		}catch(ModelException $e){
+			throw $e;
 		}
-		return false;
 	}
 
-	public function selectAllFilter(string $search, string $order, string $sort, int $iteration = 0): array|false{
+	/**
+	 * @param string $search
+	 * @param string $order
+	 * @param string $sort
+	 * @param int $iteration
+	 * @return array
+	 * @throws ModelException
+	 */
+	public function selectAllFilter(string $search, string $order, string $sort, int $iteration = 0): array{
 		if($sort === 'id'){
 			$sort = $this->id_name;
 		}else{
 			if(key_exists($sort, $this->column)){
 				$sort = $this->column[$sort];
 			}else{
-				return false;
+				throw new ModelException("Key does not exist", ModelException::$COLUMN_NOT_EXIST_ERROR);
 			}
 		}
 		$start = $this->max_row * $iteration;
@@ -175,14 +192,21 @@ abstract class Model{
 		return $this->preparedQuery($sql, ["search" => $search]);
 	}
 
-	public function selectTotalFilter(string $search, string $order, string $sort): int|false{
+	/**
+	 * @param string $search
+	 * @param string $order
+	 * @param string $sort
+	 * @return int
+	 * @throws ModelException
+	 */
+	public function selectTotalFilter(string $search, string $order, string $sort): int{
 		if($sort === 'id'){
 			$sort = $this->id_name;
 		}else{
 			if(key_exists($sort, $this->column)){
 				$sort = $this->column[$sort];
 			}else{
-				return false;
+				throw new ModelException("Key does not exist", ModelException::$COLUMN_NOT_EXIST_ERROR);
 			}
 		}
 		$sql = "SELECT COUNT($this->id_name) as count FROM $this->table_name WHERE (";
@@ -199,7 +223,18 @@ abstract class Model{
 		return $total['count'];
 	}
 
-	public function select(array $value, string $where, string $group = "", string $order = "", int $start = null, int $limit = null, bool $unique = true): array|false{
+	/**
+	 * @param array $value
+	 * @param string $where
+	 * @param string $group
+	 * @param string $order
+	 * @param int|null $start
+	 * @param int|null $limit
+	 * @param bool $unique
+	 * @return array
+	 * @throws ModelException
+	 */
+	public function select(array $value, string $where, string $group = "", string $order = "", int $start = null, int $limit = null, bool $unique = true): array{
 		$sql = "SELECT" . $this->prepareSelectColumn();
 		$sql .= " FROM $this->table_name WHERE $where";
 		if($group !== ""){
@@ -214,17 +249,33 @@ abstract class Model{
 		return $this->preparedQuery($sql, $value, unique: $unique);
 	}
 
+	/**
+	 * @param int $id
+	 * @param array $value
+	 * @return bool
+	 * @throws ModelException
+	 */
 	public function update(int $id, array $value): bool{
 		$sql = $this->prepareUpdateQuery($value);
 		$value["id"] = $id;
 		return $this->preparedQuery($sql, $value, fetch: false);
 	}
 
+	/**
+	 * @param array $value
+	 * @return int|false
+	 * @throws ModelException
+	 */
 	public function insert(array $value): int|false{
 		$sql = $this->prepareInsertQuery($value);
 		return $this->preparedQuery($sql, $value, fetch: false, last_id: true);
 	}
 
+	/**
+	 * @param int $id
+	 * @return bool
+	 * @throws ModelException
+	 */
 	public function delete(int $id): bool{
 		$sql = "DELETE FROM $this->table_name WHERE $this->id_name=:id";
 		return  $this->preparedQuery($sql, ["id" => $id], fetch: false);
