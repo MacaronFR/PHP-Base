@@ -53,7 +53,7 @@ abstract class Model{
 	 * @param bool $last_id Want to retrieve the last inserted ID (not compatible with fetch)
 	 * @return array|bool|int
 	 */
-	protected function prepared_query(string $statement, array $param, bool $unique = false, bool $fetch = true, bool $last_id = false): array|bool|int{
+	protected function preparedQuery(string $statement, array $param, bool $unique = false, bool $fetch = true, bool $last_id = false): array|bool|int{
 		$req = $this->bdd->prepare($statement);
 		foreach($param as $name => $value){
 			$req->bindValue($name, $value);
@@ -80,8 +80,8 @@ abstract class Model{
 	 * @param array $fields all Fields to insert
 	 * @return string|false Query or false on error
 	 */
-	protected function prepare_insert_query(array $fields): string|false{
-		$query = "INSERT INTO " . $this->table_name . " ";
+	protected function prepareInsertQuery(array $fields): string|false{
+		$query = "INSERT INTO $this->table_name ";
 		$column = "(";
 		$param = "(";
 		foreach($fields as $name => $value){
@@ -100,7 +100,7 @@ abstract class Model{
 	 * @param array $fields all fields to insert
 	 * @return string|false Query or false on error
 	 */
-	protected function prepare_update_query(array $fields): string|false{
+	protected function prepareUpdateQuery(array $fields): string|false{
 		$query = "UPDATE " . $this->table_name . " SET ";
 		$arg = "";
 		foreach($fields as $name => $value){
@@ -110,6 +110,15 @@ abstract class Model{
 		$arg = substr($arg, 0, -2);
 		$query .= "$arg" . " WHERE " . $this->id_name . "=:id;";
 		return $query;
+	}
+
+	protected function prepareSelectColumn(): string{
+		$column = "";
+		foreach($this->column as $key => $item){
+			$column .= " $item as $key,";
+		}
+		$column .= " $this->id_name as id";
+		return $column;
 	}
 
 	/**
@@ -154,12 +163,8 @@ abstract class Model{
 			}
 		}
 		$start = $this->max_row * $iteration;
-		$sql = "SELECT";
-		foreach($this->column as $key => $item){
-			$sql .= " $item as $key,";
-		}
-		$sql .= " $this->id_name as id FROM $this->table_name ";
-		$sql .= "WHERE (";
+		$sql = "SELECT" . $this->prepareSelectColumn();
+		$sql .= " FROM $this->table_name WHERE (";
 		foreach($this->column as $item){
 			$sql .= "$item LIKE :search OR ";
 		}
@@ -167,7 +172,7 @@ abstract class Model{
 		$sql .= "ORDER BY $sort $order ";
 		$sql .= "LIMIT $start, $this->max_row;";
 		$search = "%" . $search . "%";
-		return $this->prepared_query($sql, ["search" => $search]);
+		return $this->preparedQuery($sql, ["search" => $search]);
 	}
 
 	public function selectTotalFilter(string $search, string $order, string $sort): int|false{
@@ -187,38 +192,41 @@ abstract class Model{
 		$sql .= "$this->id_name LIKE :search ) AND $this->id_name<>0 ";
 		$sql .= "ORDER BY $sort $order ";
 		$search = "%" . $search . "%";
-		$total = $this->prepared_query($sql, ["search" => $search], unique: true);
+		$total = $this->preparedQuery($sql, ["search" => $search], unique: true);
 		if($total === false){
 			return $total;
 		}
 		return $total['count'];
 	}
 
-	public function select(mixed $value, string $column = ""): array|false{
-		if(!in_array($column, array_keys($this->column))){
-			$column = $this->id_name;
-		}else{
-			$column = $this->column[$column];
+	public function select(array $value, string $where, string $group = "", string $order = "", int $start = null, int $limit = null, bool $unique = true): array|false{
+		$sql = "SELECT" . $this->prepareSelectColumn();
+		$sql .= " FROM $this->table_name WHERE $where";
+		if($group !== ""){
+			$sql .= " GROUP BY $group";
 		}
-		$sql = "SELECT";
-		foreach($this->column as $name => $item){
-			$sql .= " $item as $name,";
+		if($order !== ""){
+			$sql .= " ORDER BY $order";
 		}
-		$sql .= " $this->id_name as id";
-		$sql .= " FROM $this->table_name WHERE $column=:id ";
-		return $this->prepared_query($sql, ["id" => $value], unique: true);
+		if($limit !== null && $start !== null){
+			$sql .= "LIMIT $start, $limit";
+		}
+		return $this->preparedQuery($sql, $value, unique: $unique);
 	}
+
 	public function update(int $id, array $value): bool{
-		$sql = $this->prepare_update_query($value);
+		$sql = $this->prepareUpdateQuery($value);
 		$value["id"] = $id;
-		return $this->prepared_query($sql, $value, fetch: false);
+		return $this->preparedQuery($sql, $value, fetch: false);
 	}
+
 	public function insert(array $value): int|false{
-		$sql = $this->prepare_insert_query($value);
-		return $this->prepared_query($sql, $value, fetch: false, last_id: true);
+		$sql = $this->prepareInsertQuery($value);
+		return $this->preparedQuery($sql, $value, fetch: false, last_id: true);
 	}
+
 	public function delete(int $id): bool{
 		$sql = "DELETE FROM $this->table_name WHERE $this->id_name=:id";
-		return  $this->prepared_query($sql, ["id" => $id], fetch: false);
+		return  $this->preparedQuery($sql, ["id" => $id], fetch: false);
 	}
 }
