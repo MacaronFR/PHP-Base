@@ -206,7 +206,7 @@ class Router{
 	public function delete(string $pattern = "/", string|null $controller_name = null, mixed $additional_param = null){
 		if($this->method == Router::DELETE){
 			if(($matches = $this->match($pattern)) !== false){
-				$this->prepareArgs($matches, $this->additional);
+				$this->prepareArgs($matches, $additional_param);
 				$controller = new $controller_name($this->uri_args, additional: $this->additional);
 				$this->routed = true;
 				if($controller !== null)
@@ -235,6 +235,12 @@ class Router{
 					$this->default_controller->delete();
 				}
 			}
+		}
+	}
+
+	public function route(string $pattern, callable $callback){
+		if($this->match($pattern) !== false){
+			$callback($this);
 		}
 	}
 
