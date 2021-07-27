@@ -25,13 +25,13 @@ class Router{
 	public const PUT = "PUT";
 	/** @var string */
 	public const DELETE = "DELETE";
-	/** @var array|null $uri_args*/
+	/** @var array|null $uri_args */
 	private array|null $uri_args = null;
-	/** @var array|null $post_args*/
+	/** @var array|null $post_args */
 	private array|null $post_args = null;
-	/** @var array|null $put_args*/
+	/** @var array|null $put_args */
 	private array|null $put_args = null;
-	/** @var array|null $additional*/
+	/** @var array|null $additional */
 	private array|null $additional = null;
 
 	/**

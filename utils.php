@@ -1,7 +1,6 @@
 <?php
 
 use JetBrains\PhpStorm\NoReturn;
-use JetBrains\PhpStorm\Pure;
 
 function parse_body(): array|false{
 	$body = file_get_contents("php://input");

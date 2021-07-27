@@ -2,6 +2,7 @@
 
 
 namespace Macaron\Base;
+
 use PDO;
 use PDOException;
 
@@ -12,6 +13,7 @@ abstract class Model{
 	protected string $id_name;
 	protected array $column;
 	protected int $max_row = 500;
+
 	/**
 	 * Models constructor.
 	 * @codeCoverageIgnore
@@ -35,7 +37,7 @@ abstract class Model{
 	 * @throws ModelException
 	 */
 	protected function query(string $statement, bool $unique = false): array{
-		try {
+		try{
 			$res = $this->bdd->query($statement);
 			if($unique){
 				return $res->fetch(PDO::FETCH_ASSOC);
@@ -60,10 +62,10 @@ abstract class Model{
 		foreach($param as $name => $value){
 			$req->bindValue($name, $value);
 		}
-		try {
+		try{
 			$req->execute();
-			if($fetch) {
-				if ($unique)
+			if($fetch){
+				if($unique)
 					return $req->fetch(PDO::FETCH_ASSOC);
 				return $req->fetchAll(PDO::FETCH_ASSOC);
 			}else{
@@ -71,7 +73,7 @@ abstract class Model{
 					return $this->bdd->lastInsertId();
 				return $req->rowCount() !== 0;
 			}
-		}catch (PDOException $e){
+		}catch(PDOException $e){
 			$errorMsg = "Error during prepared query\nSQL Query : $statement\nParam : [";
 			foreach($param as $k => $v){
 				$errorMsg .= "\n$k => $v";
@@ -278,6 +280,6 @@ abstract class Model{
 	 */
 	public function delete(int $id): bool{
 		$sql = "DELETE FROM $this->table_name WHERE $this->id_name=:id";
-		return  $this->preparedQuery($sql, ["id" => $id], fetch: false);
+		return $this->preparedQuery($sql, ["id" => $id], fetch: false);
 	}
 }
